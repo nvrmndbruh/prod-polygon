@@ -5,12 +5,12 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-# данные для создания новой сессии
+# Р·Р°РїСЂРѕСЃ РЅР° СЃРѕР·РґР°РЅРёРµ СЃРµСЃСЃРёРё
 class SessionCreate(BaseModel):
     environment_id: uuid.UUID
 
 
-# данные активной сессии
+# РѕС‚РІРµС‚ РїСЂРё СЃРѕР·РґР°РЅРёРё СЃРµСЃСЃРёРё
 class SessionResponse(BaseModel):
     id: uuid.UUID
     environment_id: Optional[uuid.UUID]

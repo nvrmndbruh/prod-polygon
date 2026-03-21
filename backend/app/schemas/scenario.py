@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-# подсказка к сценарию
+# РѕС‚РІРµС‚ РїСЂРё Р·Р°РїСЂРѕСЃРµ РїРѕРґСЃРєР°Р·РєРё
 class HintResponse(BaseModel):
     id: uuid.UUID
     order_number: int
@@ -16,7 +16,7 @@ class HintResponse(BaseModel):
         from_attributes = True
 
 
-# полная информация о сценарии со списком подсказок
+# РѕС‚РІРµС‚ РїСЂРё Р·Р°РїСЂРѕСЃРµ СЃС†РµРЅР°СЂРёСЏ
 class ScenarioResponse(BaseModel):
     id: uuid.UUID
     name: str
@@ -28,7 +28,7 @@ class ScenarioResponse(BaseModel):
         from_attributes = True
 
 
-# результат проверки решения
+# РѕС‚РІРµС‚ РїСЂРё Р·Р°РїСЂРѕСЃРµ СЂРµР·СѓР»СЊС‚Р°С‚Р° РІР°Р»РёРґР°С†РёРё
 class ValidationResultResponse(BaseModel):
     id: uuid.UUID
     success: bool

@@ -11,7 +11,7 @@ from app.schemas.environment import EnvironmentDetailResponse, EnvironmentRespon
 router = APIRouter(prefix="/environments", tags=["environments"])
 
 
-# получение списка всех окружений
+# РїРѕР»СѓС‡РµРЅРёРµ СЃРїРёСЃРєР° РІСЃРµС… РґРѕСЃС‚СѓРїРЅС‹С… РѕРєСЂСѓР¶РµРЅРёР№
 @router.get("", response_model=list[EnvironmentResponse])
 async def list_environments(
     current_user: User = Depends(get_current_user),
@@ -22,7 +22,7 @@ async def list_environments(
     return environments
 
 
-# получение детальной информации об окружении вместе со списком сценариев
+# РїРѕР»СѓС‡РµРЅРёРµ РёРЅС„РѕСЂРјР°С†РёРё РѕР± РѕРєСЂСѓР¶РµРЅРёРё
 @router.get("/{environment_id}", response_model=EnvironmentDetailResponse)
 async def get_environment(
     environment_id: str,
@@ -39,7 +39,7 @@ async def get_environment(
     if environment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Окружение не найдено",
+            detail="РћРєСЂСѓР¶РµРЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ",
         )
 
     return environment

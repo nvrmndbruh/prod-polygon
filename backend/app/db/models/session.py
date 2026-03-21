@@ -10,14 +10,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.models.base import Base
 
 
-# нумератор для статуса сессии
+# СЃС‚Р°С‚СѓСЃ СЃРµСЃСЃРёРё
 class SessionStatus(str, PyEnum):
     ACTIVE = "active"
     FINISHED = "finished"
     PAUSED = "paused"
 
 
-# модель для таблицы с сессиями
+# РјРѕРґРµР»СЊ СЃРµСЃСЃРёРё
 class Session(Base):
     __tablename__ = "sessions"
 

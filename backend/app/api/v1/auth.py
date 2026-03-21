@@ -10,23 +10,18 @@ from app.schemas.user import TokenResponse, UserLogin, UserRegister, UserRespons
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-# регистрация нового пользователя
+# СЂРµРіРёСЃС‚СЂР°С†РёСЏ РЅРѕРІРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
-    """
-    Регистрация нового пользователя.
-    Проверяет уникальность логина, хэширует пароль и сохраняет пользователя.
-    Возвращает данные созданного пользователя без пароля.
-    """
     result = await db.execute(select(User).where(User.login == data.login))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Пользователь с таким логином уже существует",
+            detail="РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃ С‚Р°РєРёРј Р»РѕРіРёРЅРѕРј СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚",
         )
 
     user = User(
@@ -40,22 +35,16 @@ async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
     return UserResponse(id=str(user.id), login=user.login)
 
 
-# вход в систему
+# РІС…РѕРґ РІ СЃРёСЃС‚РµРјСѓ
 @router.post("/login", response_model=TokenResponse)
 async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
-    """
-    Вход в систему.
-    Проверяет логин и пароль, возвращает JWT-токен.
-    Намеренно возвращаем одинаковое сообщение при неверном логине
-    и неверном пароле — чтобы не давать подсказок злоумышленнику.
-    """
     result = await db.execute(select(User).where(User.login == data.login))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный логин или пароль",
+            detail="РќРµРІРµСЂРЅС‹Р№ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ",
         )
 
     token = create_access_token(data={"sub": str(user.id)})

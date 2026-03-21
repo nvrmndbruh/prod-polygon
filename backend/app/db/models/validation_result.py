@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.models.base import Base
 
 
-# модель для таблицы с результами проверок
+# РјРѕРґРµР»СЊ СЂРµР·СѓР»СЊС‚Р°С‚Р° РІР°Р»РёРґР°С†РёРё
 class ValidationResult(Base):
     __tablename__ = "validation_results"
 

@@ -4,51 +4,51 @@ from typing import Optional
 from pydantic import BaseModel, field_validator, model_validator
 
 
-# данные для регистрации пользователя
+# СЂРµРіРёСЃС‚СЂР°С†РёСЏ РЅРѕРІРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 class UserRegister(BaseModel):
     login: str
     password: str
     password_confirm: str
 
+    # РІР°Р»РёРґР°С†РёСЏ Р»РѕРіРёРЅР°
     @field_validator("login")
     @classmethod
     def login_valid(cls, v: str) -> str:
-        # проверка логина на длину
+        
         if len(v) < 3 or len(v) > 32:
-            raise ValueError("Логин должен быть от 3 до 32 символов")
+            raise ValueError("Р”Р»РёРЅР° Р»РѕРіРёРЅР° РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РѕС‚ 3 РґРѕ 32 СЃРёРјРІРѕР»РѕРІ")
         if not re.match(r"^[a-zA-Z0-9_]+$", v):
-            raise ValueError("Логин может содержать только буквы, цифры и _")
+            raise ValueError("Р›РѕРіРёРЅ РјРѕР¶РµС‚ СЃРѕРґРµСЂР¶Р°С‚СЊ С‚РѕР»СЊРєРѕ Р±СѓРєРІС‹, С†РёС„СЂС‹ Рё СЃРёРјРІРѕР» РїРѕРґС‡РµСЂРєРёРІР°РЅРёСЏ")
         return v
 
+    # РІР°Р»РёРґР°С†РёСЏ РїР°СЂРѕР»СЏ
     @field_validator("password")
     @classmethod
     def password_valid(cls, v: str) -> str:
-        # проверка пароля на длину
         if len(v) < 6:
-            raise ValueError("Пароль должен быть не менее 6 символов")
+            raise ValueError("Р”Р»РёРЅР° РїР°СЂРѕР»СЏ РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РЅРµ РјРµРЅРµРµ 6 СЃРёРјРІРѕР»РѕРІ")
         return v
 
     @model_validator(mode="after")
     def passwords_match(self) -> "UserRegister":
-        # сравниваем пароль и его потверждение
         if self.password != self.password_confirm:
-            raise ValueError("Пароли не совпадают")
+            raise ValueError("РџР°СЂРѕР»Рё РЅРµ СЃРѕРІРїР°РґР°СЋС‚")
         return self
 
 
-# данные для входа
+# РІС…РѕРґ РІ СЃРёСЃС‚РµРјСѓ
 class UserLogin(BaseModel):
     login: str
     password: str
 
 
-# токен для запросов
+# С‚РѕРєРµРЅ
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
 
-# данные созданного пользователя (без пароля)
+# РѕС‚РІРµС‚ РїСЂРё СЂРµРіРёСЃС‚СЂР°С†РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (Р±РµР· РїР°СЂРѕР»СЏ)
 class UserResponse(BaseModel):
     id: str
     login: str

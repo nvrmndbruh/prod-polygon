@@ -5,12 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_access_token
 from app.db.db_session import get_db
-from app.db.models import User, WorkSession, SessionStatus
+from app.db.models import User, Session, SessionStatus
 
 bearer_scheme = HTTPBearer()
 
 
-# зависимость для получения текущего пользователя по JWT-токену
+# Р·Р°РІРёСЃРёРјРѕСЃС‚СЊ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ С‚РµРєСѓС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ С‚РѕРєРµРЅСѓ
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
@@ -21,7 +21,7 @@ async def get_current_user(
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Недействительный или истёкший токен",
+            detail="РќРµРІРµСЂРЅС‹Р№ С‚РѕРєРµРЅ Р°РІС‚РѕСЂРёР·Р°С†РёРё",
         )
 
     user_id = payload.get("sub")
@@ -31,21 +31,21 @@ async def get_current_user(
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Пользователь не найден",
+            detail="РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ",
         )
 
     return user
 
 
-# зависимость для получения активной сессии текущего пользователя
+# Р·Р°РІРёСЃРёРјРѕСЃС‚СЊ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ Р°РєС‚РёРІРЅРѕР№ СЃРµСЃСЃРёРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
 async def get_active_session(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> WorkSession:
+) -> Session:
     result = await db.execute(
-        select(WorkSession).where(
-            WorkSession.user_id == current_user.id,
-            WorkSession.status == SessionStatus.ACTIVE,
+        select(Session).where(
+            Session.user_id == current_user.id,
+            Session.status == SessionStatus.ACTIVE,
         )
     )
     session = result.scalar_one_or_none()
@@ -53,7 +53,7 @@ async def get_active_session(
     if session is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Активная сессия не найдена. Сначала запустите окружение",
+            detail="РђРєС‚РёРІРЅР°СЏ СЃРµСЃСЃРёСЏ РЅРµ РЅР°Р№РґРµРЅР°",
         )
 
     return session

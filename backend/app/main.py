@@ -3,14 +3,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# РїРѕРґРєР»СЋС‡Р°РµРј СЂРѕСѓС‚С‹
+from app.api.v1.router import router as api_router
 from app.db.models.base import Base
 from app.db.db_session import engine
 
-# импортируем все модели до вызова create_all
+# РїРѕРґРєР»СЋС‡Р°РµРј РјРѕРґРµР»Рё
 from app.db import models
 
 
-# менеджер жизненного цикла приложения
+# С†РёРєР» Р¶РёР·РЅРё РїСЂРёР»РѕР¶РµРЅРёСЏ
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
@@ -18,9 +20,8 @@ async def lifespan(app: FastAPI):
     yield
 
 
-# экземпляр FastAPI
 app = FastAPI(
-    title="прод/полигон API",
+    title="prod/polygon API",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -37,9 +38,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(api_router)
 
-# маршрут для проверки работоспособности сервера
+
+# СЌРЅРґРїРѕРёРЅС‚ РґР»СЏ РїСЂРѕРІРµСЂРєРё СЂР°Р±РѕС‚РѕСЃРїРѕСЃРѕР±РЅРѕСЃС‚Рё СЃРµСЂРІРµСЂР°
 @app.get("/health", tags=["system"])
 async def health():
-    # проверка работоспособности сервера
     return {"status": "ok"}

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.models.base import Base
 
 
-# модель для таблицы с подсказками
+# РјРѕРґРµР»СЊ РїРѕРґСЃРєР°Р·РєРё
 class Hint(Base):
     __tablename__ = "hints"
 

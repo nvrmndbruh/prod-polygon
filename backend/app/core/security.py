@@ -8,35 +8,35 @@ from app.core.config import settings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-# âåðèôèêàöèÿ ïàðîëÿ
+# Ð¿Ñ€Ð¾Ð²ÐµÑ€ÐºÐ° Ð¿Ð°Ñ€Ð¾Ð»Ñ Ð½Ð° ÑÐ¾Ð¾Ñ‚Ð²ÐµÑ‚ÑÑ‚Ð²Ð¸Ðµ Ñ…ÑÑˆÑƒ
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-# ïðåîáðàçîâàíèå ïàðîëÿ â õýø
+# Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ðµ Ñ…ÑÑˆÐ° Ð¿Ð°Ñ€Ð¾Ð»Ñ
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-# ôóíêöèÿ äëÿ ñîçäàíèÿ JWT
+# ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ JWT Ñ‚Ð¾ÐºÐµÐ½Ð° Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð°
 def create_access_token(
     data: dict, expires_delta: Optional[timedelta] = None
 ) -> str:
     to_encode = data.copy()
-    # ñ÷èòàåì âðåìÿ îêîí÷àíèÿ äåéñòâèÿ òîêåíà
+    # ÑƒÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ° Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸ Ð¸ÑÑ‚ÐµÑ‡ÐµÐ½Ð¸Ñ Ñ‚Ð¾ÐºÐµÐ½Ð°
     expire = datetime.now(timezone.utc) + (
         expires_delta
         or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    # âíîñèì â äàííûå
+    # Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸ Ð¸ÑÑ‚ÐµÑ‡ÐµÐ½Ð¸Ñ Ð² Ð¿Ð¾Ð»ÐµÐ·Ð½ÑƒÑŽ Ð½Ð°Ð³Ñ€ÑƒÐ·ÐºÑƒ Ñ‚Ð¾ÐºÐµÐ½Ð°
     to_encode.update({"exp": expire})
-    # âîçâðàùàåì çàøèôðîâàííûé òîêåí
+    # ÐºÐ¾Ð´Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ Ñ‚Ð¾ÐºÐµÐ½Ð°
     return jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
 
 
-# äåêîäèðîâàíèå òîêåíà
+# Ð´ÐµÐºÐ¾Ð´Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ JWT Ñ‚Ð¾ÐºÐµÐ½Ð° Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð°
 def decode_access_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(

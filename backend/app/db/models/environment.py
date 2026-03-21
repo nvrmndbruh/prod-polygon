@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.models.base import Base
 
 
-# модель для таблицы с окружениями
+# РјРѕРґРµР»СЊ РѕРєСЂСѓР¶РµРЅРёСЏ
 class Environment(Base):
     __tablename__ = "environments"
 

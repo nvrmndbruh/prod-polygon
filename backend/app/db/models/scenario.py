@@ -9,14 +9,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.models.base import Base
 
 
-# нумератор для сложности сценариев
+# СЃР»РѕР¶РЅРѕСЃС‚СЊ СЃС†РµРЅР°СЂРёСЏ
 class Difficulty(str, PyEnum):
     EASY = "easy"
     MEDIUM = "medium"
     HARD = "hard"
 
 
-# модель для таблицы со сценариями
+# РјРѕРґРµР»СЊ СЃС†РµРЅР°СЂРёСЏ
 class Scenario(Base):
     __tablename__ = "scenarios"
 
