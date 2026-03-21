@@ -33,7 +33,7 @@ class DockerService:
                 "docker", "compose",
                 "-p", project_name,
                 "-f", compose_path,
-                "up", "-d", "--build",
+                "up", "-d",
             ],
             capture_output=True,
             text=True,
@@ -132,6 +132,30 @@ class DockerService:
             f"sh {script_path}", demux=False
         )
         return exit_code, output.decode("utf-8") if output else ""
+    
+    # выполнение скрипта на хосте (для inject.sh и validate.sh)
+    def run_host_script(
+        self, session_id: str, script_path: str
+    ) -> tuple[int, str]:
+        import os
+
+        project_name = self._get_project_name(session_id)
+        full_path = str(
+            Path(settings.ENVIRONMENTS_PATH) / script_path
+        )
+
+        env = os.environ.copy()
+        env["COMPOSE_PROJECT_NAME"] = project_name
+
+        result = subprocess.run(
+            ["sh", full_path],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        output = result.stdout + result.stderr
+        return result.returncode, output
 
     # выполнение произвольной команды внутри контейнера (для терминала)
     def exec_command(

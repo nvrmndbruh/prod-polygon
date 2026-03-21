@@ -57,9 +57,8 @@ async def start_scenario(
         # запускаем inject.sh — скрипт который ломает окружение
         # скрипт выполняется на хосте через docker_service,
         # передаём имя проекта как переменную окружения
-        exit_code, output = docker_service.run_script(
+        exit_code, output = docker_service.run_host_script(
             session_id=str(current_session.id),
-            service_name="backend",
             script_path=scenario.path_to_config,
         )
         return {"message": "Сценарий запущен", "output": output}
@@ -99,9 +98,8 @@ async def validate_scenario(
     used_hints = len(previous_attempts)
 
     try:
-        exit_code, output = docker_service.run_script(
+        exit_code, output = docker_service.run_host_script(
             session_id=str(current_session.id),
-            service_name="backend",
             script_path=scenario.path_to_validator,
         )
     except RuntimeError as e:
