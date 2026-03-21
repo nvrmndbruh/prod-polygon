@@ -1,10 +1,5 @@
 import asyncio
-import struct
-import fcntl
-import termios
-import os
-import pty
-import select as io_select
+import threading
 
 import docker
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
@@ -18,29 +13,17 @@ from app.services.docker_service import docker_service
 router = APIRouter(prefix="/ws", tags=["terminal"])
 
 
-# получение пользователя из JWT-токена
 async def get_user_from_token(token: str):
-    """
-    Проверяет JWT-токен и возвращает пользователя.
-    Используется вместо обычной зависимости get_current_user,
-    потому что WebSocket не поддерживает HTTP-заголовки так же
-    как обычные запросы — токен передаётся через query-параметр.
-    """
     payload = decode_access_token(token)
     if payload is None:
         return None
-
     user_id = payload.get("sub")
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.id == user_id))
         return result.scalar_one_or_none()
 
 
-# получение активной сессии пользователя
 async def get_active_session_for_user(user_id):
-    """
-    Получает активную сессию пользователя для WebSocket-подключения.
-    """
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Session).where(
@@ -51,44 +34,27 @@ async def get_active_session_for_user(user_id):
         return result.scalar_one_or_none()
 
 
-# WebSocket-терминал для работы с контейнером окружения
 @router.websocket("/terminal")
 async def terminal_websocket(
     websocket: WebSocket,
-    token: str = Query(..., description="JWT токен авторизации"),
+    token: str = Query(...),
 ):
-    """
-    WebSocket-терминал для работы с контейнером окружения.
-
-    Протокол обмена сообщениями:
-    - Клиент → Сервер: строка с командой (обычный текст)
-    - Клиент → Сервер: JSON {"type": "resize", "rows": N, "cols": N}
-    - Сервер → Клиент: вывод команды (обычный текст)
-    - Сервер → Клиент: JSON {"type": "error", "message": "..."}
-
-    Подключение: ws://localhost:8000/api/v1/ws/terminal?token=<jwt>
-    """
     await websocket.accept()
 
-    # проверяем токен
     user = await get_user_from_token(token)
     if user is None:
-        await websocket.send_text(
-            "Ошибка: недействительный токен авторизации\r\n"
-        )
+        await websocket.send_text("Ошибка: недействительный токен\r\n")
         await websocket.close()
         return
 
-    # получаем активную сессию
     session = await get_active_session_for_user(user.id)
     if session is None:
         await websocket.send_text(
-            "Ошибка: активная сессия не найдена. Запустите окружение.\r\n"
+            "Ошибка: активная сессия не найдена\r\n"
         )
         await websocket.close()
         return
 
-    # получаем контейнер бэкенда из окружения пользователя
     project_name = docker_service._get_project_name(str(session.id))
     client = docker.from_env()
 
@@ -96,31 +62,34 @@ async def terminal_websocket(
         filters={
             "label": [
                 f"com.docker.compose.project={project_name}",
-                "com.docker.compose.service=backend",
+                "com.docker.compose.service=workspace",
             ]
         }
     )
 
     if not containers:
         await websocket.send_text(
-            "Ошибка: контейнер окружения не найден.\r\n"
+            "Ошибка: workspace-контейнер не найден\r\n"
         )
         await websocket.close()
         return
 
     container = containers[0]
 
-    # создаём PTY (псевдотерминал) и запускаем shell в контейнере
-    # PTY позволяет запустить интерактивный shell с полной поддержкой
-    # управляющих символов, цветов и команд типа top, vim и т.д.
     exec_id = client.api.exec_create(
         container.id,
-        cmd="/bin/sh",
+        cmd=["/bin/bash", "--login"],
         stdin=True,
         stdout=True,
         stderr=True,
         tty=True,
-        environment=[f"COMPOSE_PROJECT_NAME={project_name}"],
+        user="student",
+        environment=[
+            f"COMPOSE_PROJECT_NAME={project_name}",
+            "TERM=xterm-256color",
+            "LANG=en_US.UTF-8",
+            "LC_ALL=en_US.UTF-8",
+        ],
     )
 
     sock = client.api.exec_start(
@@ -130,63 +99,52 @@ async def terminal_websocket(
         socket=True,
     )
 
-    # получаем сырой сокет для прямого взаимодействия
     raw_sock = sock._sock
-    raw_sock.setblocking(False)
+    # Устанавливаем небольшой таймаут чтобы recv не блокировал вечно
+    raw_sock.settimeout(0.1)
 
-    await websocket.send_text(
-        "Подключение к окружению установлено. "
-        "Введите команду:\r\n"
-    )
+    loop = asyncio.get_event_loop()
+    stop_event = threading.Event()
 
-    try:
-        while True:
-            # ждём данных одновременно от клиента и от контейнера
-            # asyncio позволяет делать это без блокировки
-            receive_task = asyncio.create_task(
-                websocket.receive_text()
-            )
-
-            # небольшая пауза чтобы проверить вывод контейнера
-            done, pending = await asyncio.wait(
-                [receive_task],
-                timeout=0.05,
-            )
-
-            # если клиент прислал команду — отправляем в контейнер
-            if receive_task in done:
-                try:
-                    data = receive_task.result()
-                    raw_sock.send(data.encode("utf-8"))
-                except WebSocketDisconnect:
-                    break
-                except Exception:
-                    break
-            else:
-                # отменяем задачу если данных от клиента нет
-                receive_task.cancel()
-                try:
-                    await receive_task
-                except asyncio.CancelledError:
-                    pass
-
-            # читаем вывод из контейнера и отправляем клиенту
+    def read_from_container():
+        """
+        Читает вывод из контейнера в отдельном потоке
+        и отправляет клиенту через WebSocket.
+        Вынесено в поток чтобы не блокировать asyncio event loop.
+        """
+        while not stop_event.is_set():
             try:
-                output = raw_sock.recv(4096)
-                if output:
-                    await websocket.send_text(
-                        output.decode("utf-8", errors="replace")
+                data = raw_sock.recv(4096)
+                if data:
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_text(
+                            data.decode("utf-8", errors="replace")
+                        ),
+                        loop,
                     )
-            except BlockingIOError:
-                # данных пока нет — это нормально
-                pass
-            except Exception:
+            except TimeoutError:
+                # Таймаут — нормально, продолжаем ждать
+                continue
+            except OSError:
                 break
 
+    # Запускаем поток чтения
+    reader_thread = threading.Thread(target=read_from_container, daemon=True)
+    reader_thread.start()
+
+    try:
+        # Основной цикл — читаем команды от клиента и пишем в контейнер
+        while True:
+            data = await websocket.receive_text()
+            raw_sock.send(data.encode("utf-8"))
     except WebSocketDisconnect:
         pass
+    except Exception:
+        pass
     finally:
+        stop_event.set()
         try:
             raw_sock.close()
         except Exception:
             pass
+        reader_thread.join(timeout=2)

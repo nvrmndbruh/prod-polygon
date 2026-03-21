@@ -1,0 +1,142 @@
+.right-sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.right-sidebar.closed {
+  width: 0;
+  border: none;
+}
+
+.sidebar-toggle-btn.right {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  width: 20px;
+  height: 40px;
+  font-size: 16px;
+  border-radius: 4px 0 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.right-sidebar .sidebar-close {
+  font-size: 18px;
+  color: var(--text-dim);
+}
+
+/* Секции */
+.right-section {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.right-section-logs {
+  flex: 1;
+  overflow: hidden;
+  border-bottom: none;
+}
+
+/* граф */
+.graph-area {
+  padding: 12px;
+  min-height: 120px;
+}
+
+.graph-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.graph-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  min-width: 90px;
+  transition: all 0.15s ease;
+}
+
+.graph-node:hover {
+  border-color: var(--text-dim);
+}
+
+.graph-node-selected {
+  border-color: var(--color-orange);
+}
+
+.graph-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.graph-node-name {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.graph-node-status {
+  font-size: 10px;
+}
+
+.graph-node-image {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* мониторинг */
+.monitoring-container-name {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.logs-label {
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.logs-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  min-height: 0;
+}
+
+.logs-content {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

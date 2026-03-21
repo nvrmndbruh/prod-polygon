@@ -1,0 +1,152 @@
+.workspace {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+/* топбар */
+.workspace-topbar {
+  height: var(--topbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  padding: 0 8px;
+  gap: 8px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 160px;
+}
+
+.topbar-env-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: lowercase;
+}
+
+.topbar-exit {
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.topbar-exit:hover {
+  color: var(--color-orange);
+}
+
+/* вкладки терминала */
+.topbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+}
+
+.topbar-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.topbar-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.topbar-tab-active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--color-green);
+}
+
+.topbar-tab-icon {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.topbar-tab-close {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.topbar-tab-close:hover {
+  color: var(--color-red);
+  background: var(--bg-hover);
+}
+
+.topbar-tab-add {
+  color: var(--text-dim);
+  font-size: 18px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.topbar-tab-add:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* правая часть топбара */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+  justify-content: flex-end;
+}
+
+.topbar-timer {
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+/* основная область */
+.workspace-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* область терминалов */
+.workspace-terminals {
+  flex: 1;
+  overflow: hidden;
+  background: #0d0d0d;
+}
+
+.terminal-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* загрузка */
+.workspace-loading {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+}

@@ -1,4 +1,19 @@
 services:
+  workspace:
+    build:
+      context: .
+      dockerfile: workspace.Dockerfile
+    volumes:
+      # Монтируем Docker socket чтобы пользователь мог
+      # выполнять docker команды внутри контейнера
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - internal
+    stdin_open: true
+    tty: true
+    # Контейнер остаётся живым пока не завершится сессия
+    command: /bin/bash -c "while true; do sleep 1; done"
+
   nginx:
     build:
       context: .
