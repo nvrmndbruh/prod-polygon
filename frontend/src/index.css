@@ -1,0 +1,209 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;700&display=swap');
+
+/* палитра */
+:root {
+  /* фоны */
+  --bg-primary: #141414;
+  --bg-secondary: #222222;
+  --bg-card: #2a2a2a;
+  --bg-hover: #333333;
+  --bg-input: #1e1e1e;
+
+  /* акцентные цвета */
+  --color-green: #65C573;
+  --color-green-dim: #2d6a45;
+  --color-orange: #E8854F;
+  --color-orange-dim: #7a3a20;
+  --color-red: #A33D3D;
+
+  /* текст */
+  --text-primary: #e0e0e0;
+  --text-secondary: #888888;
+  --text-dim: #555555;
+
+  /* границы */
+  --border-color: #333333;
+  --border-active: #4ade80;
+
+  /* шрифты */
+  --font-mono: 'Roboto Mono', monospace;
+  --font-sans: 'Roboto', sans-serif;
+
+  /* размеры сайдбаров */
+  --sidebar-width: 320px;
+  --topbar-height: 40px;
+}
+
+/* базовые стили */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* скроллбар */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
+/* базовые компоненты */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+
+input {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+input:focus {
+  border-color: var(--color-green);
+}
+
+input::placeholder {
+  color: var(--text-dim);
+}
+
+a {
+  color: var(--color-orange);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* кнопка зелёная (основное действие) */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-green);
+  color: #0a0a0a;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* кнопка оранжевая (вторичное действие) */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-orange);
+  color: #0a0a0a;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+.btn-secondary:hover {
+  opacity: 0.9;
+}
+
+/* кнопка без фона */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* метка сложности */
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.badge-easy {
+  background: var(--color-green-dim);
+  color: var(--color-green);
+}
+
+.badge-medium {
+  background: #4a3a1a;
+  color: #e8a040;
+}
+
+.badge-hard {
+  background: #4a1a1a;
+  color: var(--color-red);
+}
+
+/* утилиты */
+.mono {
+  font-family: var(--font-mono);
+}
+
+.text-green { color: var(--color-green); }
+.text-orange { color: var(--color-orange); }
+.text-dim { color: var(--text-dim); }
+.text-secondary { color: var(--text-secondary); }
