@@ -10,13 +10,14 @@ from app.db.db_session import engine
 
 # подключаем модели
 from app.db import models
-
+from app.db.seed import seed
 
 # цикл жизни приложения
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await seed()
     yield
 
 
