@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 
 
+# класс для загрузки конфигурации из переменных окружения
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str

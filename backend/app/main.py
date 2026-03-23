@@ -12,6 +12,9 @@ from app.db.db_session import engine
 from app.db import models
 from app.db.seed import seed
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 # цикл жизни приложения
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -56,8 +56,10 @@ export default function RightSidebar({ open, onToggle, sessionId }) {
   }, [selectedContainer, sessionId]);
 
   const statusColor = (status) => {
-    if (status === 'running') return '#4ade80';
-    if (status === 'exited') return '#e05252';
+    if (!status) return '#e8a040';
+    const s = status.toLowerCase();
+    if (s.startsWith('up')) return '#4ade80';
+    if (s.startsWith('exited') || s.startsWith('dead')) return '#e05252';
     return '#e8a040';
   };
 
