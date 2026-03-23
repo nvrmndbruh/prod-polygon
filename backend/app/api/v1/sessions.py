@@ -1,27 +1,25 @@
 from datetime import datetime, timezone
+import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_active_session, get_current_user
 from app.db.db_session import get_db
 from app.db.models import Environment, Session, SessionStatus, User
 from app.schemas.session import SessionCreate, SessionResponse
-from app.services.docker_service import docker_service
+from app.services.lxc_service import lxc_service
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
-# создание новой сессии и запуск Docker-окружения
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 async def create_session(
     data: SessionCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # проверяем, нет ли уже активной сессии
     existing = await db.execute(
         select(Session).where(
             Session.user_id == current_user.id,
@@ -31,10 +29,9 @@ async def create_session(
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="У вас уже есть активная сессия. Завершите её перед запуском новой",
+            detail="У вас уже есть активная сессия",
         )
 
-    # проверяем, существует ли окружение
     env_result = await db.execute(
         select(Environment).where(Environment.id == data.environment_id)
     )
@@ -46,7 +43,6 @@ async def create_session(
             detail="Окружение не найдено",
         )
 
-    # создаём сессию в БД
     session = Session(
         user_id=current_user.id,
         environment_id=environment.id,
@@ -56,27 +52,27 @@ async def create_session(
     await db.commit()
     await db.refresh(session)
 
-    # запускаем Docker-окружение
     try:
-        docker_service.start_environment(
-            session_id=str(session.id),
-            environment_path=environment.path_to_config,
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: lxc_service.start_environment(
+                session_id=str(session.id),
+                environment_path=environment.path_to_config,
+            ),
         )
     except RuntimeError as e:
-        # если Docker не смог запустить окружение —
-        # помечаем сессию как завершённую и сообщаем об ошибке
         session.status = SessionStatus.FINISHED
         session.end_time = datetime.now(timezone.utc)
         await db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Не удалось запустить окружение: {str(e)}",
+            detail=str(e),
         )
 
     return session
 
 
-# получение информации о текущей сессии
 @router.get("/current", response_model=SessionResponse)
 async def get_current_session(
     current_session: Session = Depends(get_active_session),
@@ -84,7 +80,6 @@ async def get_current_session(
     return current_session
 
 
-# завершение сессии и остановка Docker-окружения
 @router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def stop_session(
     session_id: str,
@@ -92,9 +87,10 @@ async def stop_session(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Session)
-        .where(Session.id == session_id, Session.user_id == current_user.id)
-        .options(selectinload(Session.environment))
+        select(Session).where(
+            Session.id == session_id,
+            Session.user_id == current_user.id,
+        )
     )
     session = result.scalar_one_or_none()
 
@@ -110,16 +106,14 @@ async def stop_session(
             detail="Сессия уже завершена",
         )
 
-    # останавливаем Docker-окружение
-    if session.environment:
-        try:
-            docker_service.stop_environment(
-                session_id=str(session.id),
-                environment_path=session.environment.path_to_config,
-            )
-        except RuntimeError:
-            # логируем ошибку, но продолжаем — сессию нужно закрыть в любом случае
-            pass
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: lxc_service.stop_environment(session_id=str(session.id)),
+        )
+    except Exception:
+        pass
 
     session.status = SessionStatus.FINISHED
     session.end_time = datetime.now(timezone.utc)

@@ -8,7 +8,9 @@ services:
     volumes:
       - ./backend:/app
       - ./environments:/app/environments
-      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      # host.docker.internal резолвится в IP хоста
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy

@@ -1,16 +1,29 @@
 import asyncio
-import threading
+import ssl
 
-import docker
+import websockets
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.security import decode_access_token
 from app.db.db_session import AsyncSessionLocal
 from app.db.models import Session, SessionStatus, User
-from app.services.docker_service import docker_service
+from app.services.lxc_service import lxc_service
 
 router = APIRouter(prefix="/ws", tags=["terminal"])
+
+
+def create_lxd_ssl_context() -> ssl.SSLContext:
+    """SSL контекст с клиентским сертификатом для LXD."""
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ctx.load_cert_chain(
+        certfile=settings.LXD_CERT,
+        keyfile=settings.LXD_KEY,
+    )
+    return ctx
 
 
 async def get_user_from_token(token: str):
@@ -49,102 +62,88 @@ async def terminal_websocket(
 
     session = await get_active_session_for_user(user.id)
     if session is None:
-        await websocket.send_text(
-            "Ошибка: активная сессия не найдена\r\n"
-        )
+        await websocket.send_text("Ошибка: активная сессия не найдена\r\n")
         await websocket.close()
         return
 
-    project_name = docker_service._get_project_name(str(session.id))
-    client = docker.from_env()
-
-    containers = client.containers.list(
-        filters={
-            "label": [
-                f"com.docker.compose.project={project_name}",
-                "com.docker.compose.service=workspace",
-            ]
-        }
-    )
-
-    if not containers:
-        await websocket.send_text(
-            "Ошибка: workspace-контейнер не найден\r\n"
-        )
+    if not lxc_service.container_exists(str(session.id)):
+        await websocket.send_text("Ошибка: контейнер не найден\r\n")
         await websocket.close()
         return
-
-    container = containers[0]
-
-    exec_id = client.api.exec_create(
-        container.id,
-        cmd=["/bin/bash", "--login"],
-        stdin=True,
-        stdout=True,
-        stderr=True,
-        tty=True,
-        user="student",
-        environment=[
-            f"COMPOSE_PROJECT_NAME={project_name}",
-            "TERM=xterm-256color",
-            "LANG=en_US.UTF-8",
-            "LC_ALL=en_US.UTF-8",
-        ],
-    )
-
-    sock = client.api.exec_start(
-        exec_id["Id"],
-        detach=False,
-        tty=True,
-        socket=True,
-    )
-
-    raw_sock = sock._sock
-    # Устанавливаем небольшой таймаут чтобы recv не блокировал вечно
-    raw_sock.settimeout(0.1)
-
-    loop = asyncio.get_event_loop()
-    stop_event = threading.Event()
-
-    def read_from_container():
-        """
-        Читает вывод из контейнера в отдельном потоке
-        и отправляет клиенту через WebSocket.
-        Вынесено в поток чтобы не блокировать asyncio event loop.
-        """
-        while not stop_event.is_set():
-            try:
-                data = raw_sock.recv(4096)
-                if data:
-                    asyncio.run_coroutine_threadsafe(
-                        websocket.send_text(
-                            data.decode("utf-8", errors="replace")
-                        ),
-                        loop,
-                    )
-            except TimeoutError:
-                # Таймаут — нормально, продолжаем ждать
-                continue
-            except OSError:
-                break
-
-    # Запускаем поток чтения
-    reader_thread = threading.Thread(target=read_from_container, daemon=True)
-    reader_thread.start()
 
     try:
-        # Основной цикл — читаем команды от клиента и пишем в контейнер
-        while True:
-            data = await websocket.receive_text()
-            raw_sock.send(data.encode("utf-8"))
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        pass
+        operation_id, secret, control_secret = lxc_service.get_container_websocket(
+            str(session.id)
+        )
+    except Exception as e:
+        await websocket.send_text(f"Ошибка подключения к контейнеру: {e}\r\n")
+        await websocket.close()
+        return
+
+    lxd_host = settings.LXD_URL.replace("https://", "")
+    lxd_ws_url = (
+        f"wss://{lxd_host}/1.0/operations/{operation_id}"
+        f"/websocket?secret={secret}"
+    )
+
+    ssl_context = create_lxd_ssl_context()
+
+    try:
+        operation_id, secret, control_secret = lxc_service.get_container_websocket(
+            str(session.id)
+        )
+    except Exception as e:
+        await websocket.send_text(f"Ошибка подключения к контейнеру: {e}\r\n")
+        await websocket.close()
+        return
+
+    lxd_host = settings.LXD_URL.replace("https://", "")
+    lxd_ws_url = (
+        f"wss://{lxd_host}/1.0/operations/{operation_id}"
+        f"/websocket?secret={secret}"
+    )
+    lxd_control_url = (
+        f"wss://{lxd_host}/1.0/operations/{operation_id}"
+        f"/websocket?secret={control_secret}"
+    )
+
+    ssl_context = create_lxd_ssl_context()
+
+    try:
+        async with websockets.connect(lxd_ws_url, ssl=ssl_context) as lxd_ws, \
+                websockets.connect(lxd_control_url, ssl=ssl_context) as lxd_control:
+
+            async def forward_to_client():
+                try:
+                    async for message in lxd_ws:
+                        if isinstance(message, bytes):
+                            await websocket.send_text(
+                                message.decode("utf-8", errors="replace")
+                            )
+                        else:
+                            await websocket.send_text(message)
+                except Exception:
+                    pass
+
+            async def forward_to_lxd():
+                try:
+                    while True:
+                        data = await websocket.receive_text()
+                        await lxd_ws.send(data.encode("utf-8"))
+                except WebSocketDisconnect:
+                    pass
+                except Exception:
+                    pass
+
+            await asyncio.gather(
+                forward_to_client(),
+                forward_to_lxd(),
+            )
+
+    except Exception as e:
+        await websocket.send_text(f"Ошибка терминала: {e}\r\n")
     finally:
-        stop_event.set()
         try:
-            raw_sock.close()
+            await websocket.close()
         except Exception:
             pass
-        reader_thread.join(timeout=2)
