@@ -13,7 +13,7 @@ echo "OK: Database container is running"
 HEALTH=$(docker exec environment-backend-1 \
   curl -s http://localhost:5000/health 2>/dev/null)
 
-if echo "$HEALTH" | grep -q '"db": "ok"'; then
+if echo "$HEALTH" | grep -q '"db":"ok"'; then
   echo "OK: Backend successfully connects to database"
   exit 0
 else

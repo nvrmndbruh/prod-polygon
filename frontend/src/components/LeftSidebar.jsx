@@ -14,13 +14,22 @@ export default function LeftSidebar({
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
   const [starting, setStarting] = useState(false);
+  const [revealedCount, setRevealedCount] = useState(0);
+
+  // сбрасываем подсказки при смене сценария
+  const handleSelectScenario = (id) => {
+    setRevealedCount(0);
+    setValidationResult(null);
+    onSelectScenario(id);
+  };
 
   const handleStartScenario = async () => {
     if (!scenario) return;
     setStarting(true);
+    setRevealedCount(0);
+    setValidationResult(null);
     try {
       await client.post(`/scenarios/${scenario.id}/start`);
-      setValidationResult(null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -41,23 +50,33 @@ export default function LeftSidebar({
     }
   };
 
+  const handleRevealHint = () => {
+    if (!scenario?.hints) return;
+    const sorted = [...scenario.hints].sort(
+      (a, b) => a.order_number - b.order_number
+    );
+    if (revealedCount < sorted.length) {
+      setRevealedCount((prev) => prev + 1);
+    }
+  };
+
   const difficultyLabel = {
     easy: 'легко',
     medium: 'средне',
     hard: 'сложно',
   };
 
+  const sortedHints = scenario?.hints
+    ? [...scenario.hints].sort((a, b) => a.order_number - b.order_number)
+    : [];
+
+  const visibleHints = sortedHints.slice(0, revealedCount);
+  const hasMoreHints = revealedCount < sortedHints.length;
+
   return (
     <>
-      {/* Кнопка открытия если закрыт */}
-      {!open && (
-        <button className="sidebar-toggle-btn left" onClick={onToggle}>
-          ›
-        </button>
-      )}
 
       <aside className={`left-sidebar ${open ? 'open' : 'closed'}`}>
-        {/* Заголовок */}
         <div className="sidebar-header">
           <div className="sidebar-header-title">
             <span className="text-green mono">[i]</span>
@@ -69,14 +88,13 @@ export default function LeftSidebar({
         </div>
 
         <div className="sidebar-content">
-          {/* Выбор сценария */}
           {scenarios.length > 1 && (
             <div className="sidebar-section">
               <p className="sidebar-label">сценарий</p>
               <select
                 className="scenario-select"
                 value={scenario?.id || ''}
-                onChange={(e) => onSelectScenario(e.target.value)}
+                onChange={(e) => handleSelectScenario(e.target.value)}
               >
                 {scenarios.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -89,50 +107,63 @@ export default function LeftSidebar({
 
           {scenario ? (
             <>
-              {/* Сложность */}
               <div className="sidebar-section">
                 <span className={`badge badge-${scenario.difficulty}`}>
                   {difficultyLabel[scenario.difficulty] || scenario.difficulty}
                 </span>
               </div>
 
-              {/* Описание проблемы */}
               <div className="sidebar-section">
                 <p className="sidebar-label">текущая проблема:</p>
                 <p className="sidebar-text">{scenario.description}</p>
               </div>
 
-              {/* Подсказки */}
-              {scenario.hints?.length > 0 && (
+              {/* подсказки */}
+              {sortedHints.length > 0 && (
                 <div className="sidebar-section">
                   <div className="sidebar-label">
                     <span className="text-orange mono">[?]</span>
-                    {' '}подсказки
+                    {' '}подсказки{' '}
+                    <span className="text-dim mono">
+                      ({revealedCount}/{sortedHints.length})
+                    </span>
                   </div>
-                  <div className="hints-list">
-                    {scenario.hints.map((hint) => (
-                      <div key={hint.id} className="hint-item">
-                        <span className="hint-number mono text-orange">
-                          ({hint.order_number})
-                        </span>
-                        <span className="hint-text">{hint.text}</span>
-                        {hint.documentation_link && (
+
+                  {visibleHints.length > 0 && (
+                    <div className="hints-list">
+                      {visibleHints.map((hint) => (
+                        <div key={hint.id} className="hint-item">
+                          <span className="hint-number mono text-orange">
+                            ({hint.order_number})
+                          </span>
+                          <span className="hint-text">{hint.text}</span>
+                          {hint.documentation_link && (
                             <a
-                            href={hint.documentation_link}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="hint-link"
-                        >
-                            документация →
-                        </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                              href={hint.documentation_link}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="hint-link"
+                            >
+                              документация →
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {hasMoreHints && (
+                    <button
+                      className="btn-ghost hint-reveal-btn"
+                      onClick={handleRevealHint}
+                    >
+                      <HintIcon size={13} />
+                      показать подсказку
+                    </button>
+                  )}
                 </div>
               )}
 
-              {/* Результат проверки */}
               {validationResult && (
                 <div className={`validation-result ${
                   validationResult.success ? 'success' : 'failure'
@@ -155,7 +186,6 @@ export default function LeftSidebar({
           )}
         </div>
 
-        {/* Кнопки действий */}
         {scenario && (
           <div className="sidebar-actions">
             <button
@@ -172,7 +202,7 @@ export default function LeftSidebar({
               onClick={handleValidate}
               disabled={validating}
             >
-              <HintIcon size={14} />
+              <CheckIcon size={14} />
               {validating ? 'проверка...' : 'проверка'}
             </button>
           </div>

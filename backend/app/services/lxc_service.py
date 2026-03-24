@@ -7,11 +7,6 @@ from app.core.config import settings
 
 
 class LXCService:
-    """
-    Сервис управления пользовательскими окружениями через LXD API.
-    Подключается к LXD через HTTPS используя клиентский сертификат.
-    """
-
     BASE_IMAGE = "prod-polygon-base"
 
     def __init__(self):
@@ -19,7 +14,6 @@ class LXCService:
 
     @property
     def client(self) -> pylxd.Client:
-        """Ленивое подключение к LXD API."""
         if self._client is None:
             self._client = pylxd.Client(
                 endpoint=settings.LXD_URL,
@@ -29,20 +23,15 @@ class LXCService:
         return self._client
 
     def _get_container_name(self, session_id: str) -> str:
-        """Имя LXD-контейнера — короткое, без дефисов."""
         short_id = session_id.replace("-", "")[:16]
         return f"pp-{short_id}"
 
     def _get_environment_dir(self, environment_path: str) -> Path:
-        """Путь до каталога окружения на хосте."""
         return Path(settings.ENVIRONMENTS_PATH) / environment_path
 
     def _copy_directory_to_container(
         self, container, src_dir: Path, dst_dir: str
     ) -> None:
-        """
-        Рекурсивно копирует каталог с хоста внутрь LXD-контейнера.
-        """
         container.execute(["mkdir", "-p", dst_dir])
 
         for item in src_dir.rglob("*"):
@@ -60,11 +49,6 @@ class LXCService:
     def start_environment(
         self, session_id: str, environment_path: str
     ) -> None:
-        """
-        Создаёт LXD-контейнер из базового образа и запускает окружение внутри.
-        Копирует весь каталог окружения чтобы были доступны все файлы
-        (compose.yml, nginx.conf и прочие конфиги).
-        """
         container_name = self._get_container_name(session_id)
         env_dir = self._get_environment_dir(environment_path)
 
@@ -73,7 +57,6 @@ class LXCService:
                 f"Каталог окружения не найден: {env_dir}"
             )
 
-        # Создаём контейнер из базового образа с профилями для Docker
         container = self.client.instances.create(
             {
                 "name": container_name,
@@ -88,16 +71,12 @@ class LXCService:
         )
 
         container.start(wait=True)
-
-        # Ждём пока контейнер полностью запустится
         time.sleep(3)
 
-        # Копируем весь каталог окружения внутрь контейнера
         self._copy_directory_to_container(
             container, env_dir, "/opt/environment"
         )
 
-        # Запускаем docker compose внутри контейнера
         result = container.execute(
             [
                 "docker", "compose",
@@ -113,7 +92,6 @@ class LXCService:
             )
 
     def stop_environment(self, session_id: str) -> None:
-        """Останавливает и удаляет LXD-контейнер."""
         container_name = self._get_container_name(session_id)
 
         try:
@@ -130,8 +108,32 @@ class LXCService:
         except pylxd.exceptions.LXDAPIException:
             pass
 
+    def restart_environment(self, session_id: str) -> None:
+        container_name = self._get_container_name(session_id)
+
+        try:
+            container = self.client.instances.get(container_name)
+        except pylxd.exceptions.LXDAPIException:
+            raise RuntimeError("Контейнер не найден")
+
+        container.execute([
+            "docker", "compose",
+            "-f", "/opt/environment/compose.yml",
+            "down",
+        ])
+
+        result = container.execute([
+            "docker", "compose",
+            "-f", "/opt/environment/compose.yml",
+            "up", "-d",
+        ])
+
+        if result.exit_code != 0:
+            raise RuntimeError(
+                f"Не удалось перезапустить окружение: {result.stderr}"
+            )
+
     def get_containers(self, session_id: str) -> list[dict]:
-        """Список Docker-контейнеров внутри LXD-контейнера."""
         container_name = self._get_container_name(session_id)
 
         try:
@@ -164,7 +166,6 @@ class LXCService:
     def get_logs(
         self, session_id: str, service_name: str, lines: int = 100
     ) -> str:
-        """Логи Docker-сервиса внутри LXD-контейнера."""
         container_name = self._get_container_name(session_id)
 
         try:
@@ -178,10 +179,50 @@ class LXCService:
         except Exception as e:
             raise RuntimeError(str(e))
 
+    def check_connections(self, session_id: str) -> list[dict]:
+        container_name = self._get_container_name(session_id)
+
+        try:
+            container = self.client.instances.get(container_name)
+        except pylxd.exceptions.LXDAPIException:
+            return []
+
+        results = []
+
+        # backend → db и backend → redis через health эндпоинт
+        health_check = container.execute([
+            "docker", "exec", "environment-backend-1",
+            "python3", "-c",
+            "import urllib.request; print(urllib.request.urlopen('http://localhost:5000/health', timeout=3).read().decode())",
+        ])
+
+        health_output = health_check.stdout if health_check.exit_code == 0 else ""
+
+        db_ok = '"db":"ok"' in health_output
+        redis_ok = '"redis":"ok"' in health_output
+
+        results.append({"from": "backend", "to": "db", "ok": db_ok})
+        results.append({"from": "backend", "to": "redis", "ok": redis_ok})
+
+        # nginx → backend: проверяем через python из backend контейнера
+        # обращаемся к nginx по имени сервиса внутри docker сети
+        nginx_check = container.execute([
+            "docker", "exec", "environment-backend-1",
+            "python3", "-c",
+            "import urllib.request; urllib.request.urlopen('http://nginx:80/health', timeout=3); print('ok')",
+        ])
+
+        results.append({
+            "from": "nginx",
+            "to": "backend",
+            "ok": nginx_check.exit_code == 0,
+        })
+
+        return results
+
     def run_script(
         self, session_id: str, script_path: str
     ) -> tuple[int, str]:
-        """Выполняет inject.sh или validate.sh внутри LXD-контейнера."""
         container_name = self._get_container_name(session_id)
         full_path = Path(settings.ENVIRONMENTS_PATH) / script_path
 
@@ -198,7 +239,6 @@ class LXCService:
         return result.exit_code, result.stdout + result.stderr
 
     def container_exists(self, session_id: str) -> bool:
-        """Проверяет существование контейнера."""
         container_name = self._get_container_name(session_id)
         try:
             self.client.instances.get(container_name)
@@ -206,7 +246,9 @@ class LXCService:
         except pylxd.exceptions.LXDAPIException:
             return False
 
-    def get_container_websocket(self, session_id: str):
+    def get_container_websocket(
+        self, session_id: str, cols: int = 80, rows: int = 24
+    ):
         container_name = self._get_container_name(session_id)
 
         response = self.client.api.instances[container_name].exec.post(
@@ -218,13 +260,14 @@ class LXCService:
                 },
                 "wait-for-websocket": True,
                 "interactive": True,
+                "width": cols,
+                "height": rows,
             }
         )
 
         data = response.json()
         operation_id = data["operation"].split("/")[-1]
         fds = data["metadata"]["metadata"]["fds"]
-        
         secret = fds["0"]
         control_secret = fds.get("control", "")
 

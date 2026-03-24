@@ -14,7 +14,6 @@ export default function Terminal({ sessionId, token, active }) {
   useEffect(() => {
     if (!containerRef.current || !sessionId || !token) return;
 
-    // инициализируем xterm.js
     const term = new XTerm({
       theme: {
         background: '#0d0d0d',
@@ -55,17 +54,30 @@ export default function Terminal({ sessionId, token, active }) {
     term.open(containerRef.current);
     fitAddon.fit();
 
+    const ws = new WebSocket(
+      `${WS_URL}/api/v1/ws/terminal?token=${token}&cols=${term.cols}&rows=${term.rows}`
+    );
+
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // подключаем WebSocket
-    const ws = new WebSocket(
-      `${WS_URL}/api/v1/ws/terminal?token=${token}`
-    );
     wsRef.current = ws;
+
+    // отправляем текущий размер терминала
+    const sendResize = () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'resize',
+          cols: term.cols,
+          rows: term.rows,
+        }));
+      }
+    };
 
     ws.onopen = () => {
       term.writeln('\x1b[32mСоединение установлено\x1b[0m');
+      // отправляем размер сразу после подключения
+      sendResize();
     };
 
     ws.onmessage = (event) => {
@@ -80,14 +92,17 @@ export default function Terminal({ sessionId, token, active }) {
       term.writeln('\r\n\x1b[31mОшибка подключения\x1b[0m');
     };
 
-    // отправляем ввод пользователя в WebSocket
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(data);
       }
     });
 
-    // подгоняем размер при изменении окна
+    // отправляем новый размер при resize терминала
+    term.onResize(() => {
+      sendResize();
+    });
+
     const handleResize = () => {
       fitAddon.fit();
     };
@@ -100,7 +115,6 @@ export default function Terminal({ sessionId, token, active }) {
     };
   }, [sessionId, token]);
 
-  // подгоняем размер когда вкладка становится активной
   useEffect(() => {
     if (active && fitAddonRef.current) {
       setTimeout(() => fitAddonRef.current?.fit(), 50);

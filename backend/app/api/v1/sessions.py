@@ -118,3 +118,44 @@ async def stop_session(
     session.status = SessionStatus.FINISHED
     session.end_time = datetime.now(timezone.utc)
     await db.commit()
+
+
+@router.post("/{session_id}/restart", status_code=status.HTTP_200_OK)
+async def restart_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Session).where(
+            Session.id == session_id,
+            Session.user_id == current_user.id,
+        )
+    )
+    session = result.scalar_one_or_none()
+
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Сессия не найдена",
+        )
+
+    if session.status != SessionStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Сессия не активна",
+        )
+
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: lxc_service.restart_environment(str(session.id)),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+    return {"message": "Окружение перезапущено"}

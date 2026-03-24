@@ -9,6 +9,27 @@ from app.services.lxc_service import lxc_service
 router = APIRouter(prefix="/containers", tags=["containers"])
 
 
+@router.get("/connections/status")
+async def get_connections_status(
+    current_session: Session = Depends(get_active_session),
+):
+    """
+    Проверяет реальную HTTP связь между сервисами внутри LXD контейнера.
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        statuses = await loop.run_in_executor(
+            None,
+            lambda: lxc_service.check_connections(str(current_session.id)),
+        )
+        return {"connections": statuses}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
 @router.get("")
 async def list_containers(
     current_session: Session = Depends(get_active_session),

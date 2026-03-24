@@ -1,4 +1,5 @@
 import asyncio
+import json
 import ssl
 
 import websockets
@@ -15,7 +16,6 @@ router = APIRouter(prefix="/ws", tags=["terminal"])
 
 
 def create_lxd_ssl_context() -> ssl.SSLContext:
-    """SSL контекст с клиентским сертификатом для LXD."""
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
@@ -51,6 +51,8 @@ async def get_active_session_for_user(user_id):
 async def terminal_websocket(
     websocket: WebSocket,
     token: str = Query(...),
+    cols: int = Query(default=80),
+    rows: int = Query(default=24),
 ):
     await websocket.accept()
 
@@ -73,24 +75,9 @@ async def terminal_websocket(
 
     try:
         operation_id, secret, control_secret = lxc_service.get_container_websocket(
-            str(session.id)
-        )
-    except Exception as e:
-        await websocket.send_text(f"Ошибка подключения к контейнеру: {e}\r\n")
-        await websocket.close()
-        return
-
-    lxd_host = settings.LXD_URL.replace("https://", "")
-    lxd_ws_url = (
-        f"wss://{lxd_host}/1.0/operations/{operation_id}"
-        f"/websocket?secret={secret}"
-    )
-
-    ssl_context = create_lxd_ssl_context()
-
-    try:
-        operation_id, secret, control_secret = lxc_service.get_container_websocket(
-            str(session.id)
+            str(session.id),
+            cols=cols,
+            rows=rows,
         )
     except Exception as e:
         await websocket.send_text(f"Ошибка подключения к контейнеру: {e}\r\n")
@@ -111,7 +98,7 @@ async def terminal_websocket(
 
     try:
         async with websockets.connect(lxd_ws_url, ssl=ssl_context) as lxd_ws, \
-                websockets.connect(lxd_control_url, ssl=ssl_context) as lxd_control:
+                   websockets.connect(lxd_control_url, ssl=ssl_context) as lxd_control:
 
             async def forward_to_client():
                 try:
@@ -129,7 +116,26 @@ async def terminal_websocket(
                 try:
                     while True:
                         data = await websocket.receive_text()
+
+                        # проверяем не является ли это resize сообщением
+                        try:
+                            msg = json.loads(data)
+                            if msg.get("type") == "resize":
+                                # отправляем resize в control канал LXD
+                                await lxd_control.send(json.dumps({
+                                    "command": "window-resize",
+                                    "args": {
+                                        "width": msg.get("cols", 80),
+                                        "height": msg.get("rows", 24),
+                                    },
+                                }))
+                                continue
+                        except (json.JSONDecodeError, AttributeError):
+                            pass
+
+                        # обычный ввод — отправляем в основной канал
                         await lxd_ws.send(data.encode("utf-8"))
+
                 except WebSocketDisconnect:
                     pass
                 except Exception:

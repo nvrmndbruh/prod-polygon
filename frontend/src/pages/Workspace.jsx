@@ -11,39 +11,33 @@ import './Workspace.css';
 export default function Workspace() {
   const navigate = useNavigate();
 
-  // данные сессии и окружения
   const [session, setSession] = useState(null);
   const [environment, setEnvironment] = useState(null);
   const [scenarios, setScenarios] = useState([]);
   const [activeScenario, setActiveScenario] = useState(null);
 
-  // состояние сайдбаров
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
 
-  // вкладки терминала
   const [terminals, setTerminals] = useState([{ id: 1, label: 'terminal 1' }]);
   const [activeTerminal, setActiveTerminal] = useState(1);
 
-  // загрузка при старте
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [restarting, setRestarting] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       try {
-        // получаем активную сессию
         const sessionRes = await client.get('/sessions/current');
         setSession(sessionRes.data);
 
-        // получаем детали окружения со сценариями
         const envRes = await client.get(
           `/environments/${sessionRes.data.environment_id}`
         );
         setEnvironment(envRes.data);
         setScenarios(envRes.data.scenarios || []);
 
-        // если есть сценарии — выбираем первый по умолчанию
         if (envRes.data.scenarios?.length > 0) {
           const scenarioRes = await client.get(
             `/scenarios/${envRes.data.scenarios[0].id}`
@@ -52,7 +46,6 @@ export default function Workspace() {
         }
       } catch (err) {
         if (err.response?.status === 404) {
-          // нет активной сессии — возвращаем на выбор окружения
           navigate('/environments');
         } else {
           setError('Не удалось загрузить данные сессии');
@@ -65,7 +58,6 @@ export default function Workspace() {
     init();
   }, [navigate]);
 
-  // выбор сценария
   const handleSelectScenario = useCallback(async (scenarioId) => {
     try {
       const res = await client.get(`/scenarios/${scenarioId}`);
@@ -75,7 +67,6 @@ export default function Workspace() {
     }
   }, []);
 
-  // завершение сессии
   const handleEndSession = async () => {
     if (!session) return;
     if (!window.confirm('Завершить сессию? Все изменения в окружении будут потеряны.')) {
@@ -89,7 +80,22 @@ export default function Workspace() {
     }
   };
 
-  // добавление вкладки терминала
+  // перезапуск окружения
+  const handleRestartEnvironment = async () => {
+    if (!session) return;
+    if (!window.confirm('Перезапустить окружение? Все текущие изменения будут сброшены.')) {
+      return;
+    }
+    setRestarting(true);
+    try {
+      await client.post(`/sessions/${session.id}/restart`);
+    } catch (err) {
+      console.error('Не удалось перезапустить окружение', err);
+    } finally {
+      setRestarting(false);
+    }
+  };
+
   const handleAddTerminal = () => {
     const newId = Math.max(...terminals.map((t) => t.id)) + 1;
     setTerminals((prev) => [
@@ -99,9 +105,8 @@ export default function Workspace() {
     setActiveTerminal(newId);
   };
 
-  // закрытие вкладки терминала
   const handleCloseTerminal = (id) => {
-    if (terminals.length === 1) return; // минимум одна вкладка
+    if (terminals.length === 1) return;
     const remaining = terminals.filter((t) => t.id !== id);
     setTerminals(remaining);
     if (activeTerminal === id) {
@@ -109,7 +114,6 @@ export default function Workspace() {
     }
   };
 
-  // выход из аккаунта
   const handleLogout = () => {
     handleEndSession().finally(() => {
       auth.removeToken();
@@ -139,9 +143,30 @@ export default function Workspace() {
       <header className="workspace-topbar">
         <div className="topbar-left">
           <LogoIcon size={22} />
+
+          {/* кнопка левого сайдбара */}
+          <button
+            className={`btn-ghost topbar-sidebar-btn ${leftOpen ? 'active' : ''}`}
+            onClick={() => setLeftOpen((v) => !v)}
+            title="Левая панель"
+          >
+            ☰
+          </button>
+
           <span className="topbar-env-name mono">
             {environment?.name || '—'}
           </span>
+
+          {/* кнопка перезапуска */}
+          <button
+            className="btn-ghost topbar-restart"
+            onClick={handleRestartEnvironment}
+            disabled={restarting}
+            title="Перезапустить окружение"
+          >
+            {restarting ? '↻...' : '↻'}
+          </button>
+
           <button
             className="btn-ghost topbar-exit"
             onClick={handleEndSession}
@@ -186,7 +211,7 @@ export default function Workspace() {
         <div className="topbar-right">
           <SessionTimer startTime={session?.start_time} />
           <button
-            className="btn-ghost"
+            className={`btn-ghost topbar-sidebar-btn ${rightOpen ? 'active' : ''}`}
             onClick={() => setRightOpen((v) => !v)}
             title="Правая панель"
           >
@@ -197,7 +222,6 @@ export default function Workspace() {
 
       {/* основная область */}
       <div className="workspace-body">
-        {/* левый сайдбар */}
         <LeftSidebar
           open={leftOpen}
           onToggle={() => setLeftOpen((v) => !v)}
@@ -207,7 +231,6 @@ export default function Workspace() {
           onSelectScenario={handleSelectScenario}
         />
 
-        {/* терминалы */}
         <div className="workspace-terminals">
           {terminals.map((term) => (
             <div
@@ -224,19 +247,16 @@ export default function Workspace() {
           ))}
         </div>
 
-        {/* правый сайдбар */}
         <RightSidebar
           open={rightOpen}
           onToggle={() => setRightOpen((v) => !v)}
           sessionId={session?.id}
-          containers={[]}
         />
       </div>
     </div>
   );
 }
 
-// таймер сессии
 function SessionTimer({ startTime }) {
   const [elapsed, setElapsed] = useState('00:00');
 
