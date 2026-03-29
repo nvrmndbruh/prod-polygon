@@ -146,6 +146,26 @@
   line-height: 1.6;
 }
 
+.env-card-status {
+  margin-top: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.env-card-status.ok {
+  color: var(--color-green);
+}
+
+.env-card-status.pending {
+  color: var(--color-orange);
+}
+
+.env-card-unavailable {
+  border-color: rgba(255, 148, 32, 0.35);
+}
+
 /* Кнопка запуска */
 .picker-start {
   padding: 12px 32px;
@@ -153,6 +173,11 @@
 }
 
 .picker-starting-hint {
+  font-size: 12px;
+  margin-top: -24px;
+}
+
+.picker-unavailable-hint {
   font-size: 12px;
   margin-top: -24px;
 }

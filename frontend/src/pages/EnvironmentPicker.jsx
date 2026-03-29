@@ -13,6 +13,8 @@ export default function EnvironmentPicker() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
+  const selectedEnvironment = environments[selectedIndex] || null;
+
   // загружаем список окружений при открытии страницы
   useEffect(() => {
     const fetchEnvironments = async () => {
@@ -23,32 +25,8 @@ export default function EnvironmentPicker() {
         // проверяем — вдруг у пользователя уже есть активная сессия
         // если есть — сразу отправляем на рабочую страницу
         const sessionResponse = await client.get('/sessions/current');
-        if (sessionResponse.data?.id) {
-          try {
-            const statusResponse = await client.get(
-              `/sessions/${sessionResponse.data.id}/status`
-            );
-            const status = statusResponse.data || {};
-            const launchingStages = new Set([
-              'queued',
-              'lxd_starting',
-              'provisioning',
-              'compose_starting',
-              'services_booting',
-              'health_checks',
-            ]);
-
-            const shouldOpenWorkspace =
-              status.is_ready ||
-              status.exists ||
-              launchingStages.has(status.stage);
-
-            if (shouldOpenWorkspace) {
-              navigate('/workspace');
-            }
-          } catch {
-            // если статус не получить, остаёмся на выборе окружения
-          }
+        if (sessionResponse.data) {
+          navigate('/workspace');
         }
       } catch (err) {
         // 404 значит сессии нет
@@ -76,13 +54,18 @@ export default function EnvironmentPicker() {
   };
 
   const handleStart = async () => {
-    if (!environments[selectedIndex]) return;
+    if (!selectedEnvironment) return;
+    if (!selectedEnvironment.is_available) {
+      setError('Это окружение пока недоступно для запуска');
+      return;
+    }
+
     setStarting(true);
     setError('');
 
     try {
       await client.post('/sessions', {
-        environment_id: environments[selectedIndex].id,
+        environment_id: selectedEnvironment.id,
       });
       navigate('/workspace');
     } catch (err) {
@@ -152,7 +135,7 @@ export default function EnvironmentPicker() {
                 )}
 
                 <EnvironmentCard
-                  environment={environments[selectedIndex]}
+                  environment={selectedEnvironment}
                   active={true}
                   onClick={handleStart}
                 />
@@ -179,23 +162,19 @@ export default function EnvironmentPicker() {
             <button
               className="btn-primary picker-start"
               onClick={handleStart}
-              disabled={starting}
+              disabled={starting || !selectedEnvironment?.is_available}
             >
               {starting ? (
                 <>
                   <span className="picker-spinner" />
                   запуск окружения...
                 </>
+              ) : !selectedEnvironment?.is_available ? (
+                '[!] окружение недоступно'
               ) : (
                 '[>] запустить окружение'
               )}
             </button>
-
-            {starting && (
-              <p className="picker-starting-hint text-secondary mono">
-                развёртывание занимает около 30 секунд
-              </p>
-            )}
           </>
         )}
       </main>
@@ -205,9 +184,13 @@ export default function EnvironmentPicker() {
 
 // карточка одного окружения
 function EnvironmentCard({ environment, active, onClick }) {
+  const available = Boolean(environment?.is_available);
+
   return (
     <div
-      className={`env-card ${active ? 'env-card-active' : 'env-card-dim'}`}
+      className={`env-card ${active ? 'env-card-active' : 'env-card-dim'} ${
+        available ? '' : 'env-card-unavailable'
+      }`}
       onClick={onClick}
     >
       {/* иконка окружения заглушка */}
@@ -217,6 +200,9 @@ function EnvironmentCard({ environment, active, onClick }) {
 
       <h3 className="env-card-name">{environment.name}</h3>
       <p className="env-card-desc">{environment.description}</p>
+      <p className={`env-card-status ${available ? 'ok' : 'pending'}`}>
+        {available ? 'доступно' : 'в разработке'}
+      </p>
     </div>
   );
 }

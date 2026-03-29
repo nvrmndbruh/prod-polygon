@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # краткая информация о сценарии
@@ -19,6 +19,7 @@ class EnvironmentResponse(BaseModel):
     id: uuid.UUID
     name: str
     description: str
+    is_available: bool = True
 
     class Config:
         from_attributes = True
@@ -29,7 +30,8 @@ class EnvironmentDetailResponse(BaseModel):
     id: uuid.UUID
     name: str
     description: str
-    scenarios: list[ScenarioShort] = []
+    scenarios: list[ScenarioShort] = Field(default_factory=list)
+    is_available: bool = True
 
     class Config:
         from_attributes = True

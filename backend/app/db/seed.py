@@ -16,8 +16,8 @@ async def seed():
             print("Database already seeded, skipping.")
             return
 
-        # создаём окружение
-        environment = Environment(
+        # создаём окружение магазина
+        shop_environment = Environment(
             id=uuid.uuid4(),
             name="Интернет-магазин",
             description=(
@@ -28,13 +28,43 @@ async def seed():
             ),
             path_to_config="monolith-shop",
         )
-        db.add(environment)
+        db.add(shop_environment)
+        await db.flush()
+
+        # создаём окружение банка
+        bank_environment = Environment(
+            id=uuid.uuid4(),
+            name="Онлайн-банк",
+            description=(
+                "Микросервисное приложение онлайн-банка. "
+                "Включает API Gateway, сервис пользователей, платёжный сервис, "
+                "сервис уведомлений, PostgreSQL, Redis. "
+                "Архитектура типична для современных финансовых приложений."
+            ),
+            path_to_config="microservices-bank",
+        )
+        db.add(bank_environment)
+        await db.flush()
+
+        # окружение системы обработки данных
+        event_environment = Environment(
+            id=uuid.uuid4(),
+            name="Система обработки данных",
+            description=(
+                "Событийно-ориентированная архитектура. "
+                "Включает Producer, RabbitMQ, Consumer, PostgreSQL. "
+                "Асинхронное взаимодействие через брокер сообщений и "
+                "типичные проблемы очередей."
+            ),
+            path_to_config="microservices-data-processing",
+        )
+        db.add(event_environment)
         await db.flush()
 
         # сценарий 1
         scenario1 = Scenario(
             id=uuid.uuid4(),
-            environment_id=environment.id,
+            environment_id=shop_environment.id,
             name="База данных недоступна",
             description=(
                 "PostgreSQL неожиданно перестал отвечать. "
@@ -75,7 +105,7 @@ async def seed():
         # сценарий 2
         scenario2 = Scenario(
             id=uuid.uuid4(),
-            environment_id=environment.id,
+            environment_id=shop_environment.id,
             name="Неверная конфигурация Nginx",
             description=(
                 "Все запросы к сайту возвращают ошибку 502 Bad Gateway. "

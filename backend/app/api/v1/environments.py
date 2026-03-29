@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from pathlib import Path
+from app.core.config import settings
 
 from app.api.deps import get_current_user
 from app.db.db_session import get_db
@@ -9,6 +11,11 @@ from app.db.models import Environment, User
 from app.schemas.environment import EnvironmentDetailResponse, EnvironmentResponse
 
 router = APIRouter(prefix="/environments", tags=["environments"])
+
+def check_available(path_to_config: str) -> bool:
+    # проверяет наличие реализации окружения на диске
+    env_dir = Path(settings.ENVIRONMENTS_PATH) / path_to_config
+    return env_dir.exists() and (env_dir / "compose.yml").exists()
 
 
 # получение списка всех доступных окружений
@@ -19,7 +26,18 @@ async def list_environments(
 ):
     result = await db.execute(select(Environment))
     environments = result.scalars().all()
-    return environments
+    response: list[EnvironmentResponse] = []
+    for env in environments:
+        response.append(
+            EnvironmentResponse(
+                id=env.id,
+                name=env.name,
+                description=env.description,
+                is_available=check_available(env.path_to_config),
+            )
+        )
+
+    return response
 
 
 # получение информации об окружении
@@ -42,4 +60,5 @@ async def get_environment(
             detail="Окружение не найдено",
         )
 
+    environment.is_available = check_available(environment.path_to_config)
     return environment
