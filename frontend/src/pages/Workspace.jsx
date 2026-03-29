@@ -23,40 +23,113 @@ export default function Workspace() {
   const [activeTerminal, setActiveTerminal] = useState(1);
 
   const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('загрузка рабочего пространства...');
   const [error, setError] = useState('');
   const [restarting, setRestarting] = useState(false);
 
+  const waitForSessionReady = useCallback(async (sessionId, options = {}) => {
+    const { onStatus, shouldStop } = options;
+    let failedStreak = 0;
+
+    while (true) {
+      if (shouldStop?.()) return false;
+
+      try {
+        const statusRes = await client.get(`/sessions/${sessionId}/status`);
+        const status = statusRes.data || {};
+
+        onStatus?.(status);
+
+        if (status.is_ready) {
+          return true;
+        }
+
+        if (status.stage === 'failed') {
+          failedStreak += 1;
+          if (failedStreak >= 3) {
+            throw new Error(status.message || 'Не удалось запустить окружение');
+          }
+        } else {
+          failedStreak = 0;
+        }
+      } catch (err) {
+        if (shouldStop?.()) return false;
+
+        if (err.response?.status === 404) {
+          throw err;
+        }
+
+        if (!err.response) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          continue;
+        }
+
+        throw err;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }, []);
+
   useEffect(() => {
+    let cancelled = false;
+
     const init = async () => {
       try {
+        setLoadingMessage('получение активной сессии...');
+
         const sessionRes = await client.get('/sessions/current');
+        if (cancelled) return;
         setSession(sessionRes.data);
+
+        setLoadingMessage('получение данных окружения...');
 
         const envRes = await client.get(
           `/environments/${sessionRes.data.environment_id}`
         );
+        if (cancelled) return;
         setEnvironment(envRes.data);
         setScenarios(envRes.data.scenarios || []);
+
+        setLoadingMessage('подготовка окружения...');
+        const ready = await waitForSessionReady(sessionRes.data.id, {
+          shouldStop: () => cancelled,
+          onStatus: (status) => {
+            if (cancelled) return;
+            setLoadingMessage(status.message || 'подготовка окружения...');
+          },
+        });
+
+        if (!ready || cancelled) return;
 
         if (envRes.data.scenarios?.length > 0) {
           const scenarioRes = await client.get(
             `/scenarios/${envRes.data.scenarios[0].id}`
           );
+          if (cancelled) return;
           setActiveScenario(scenarioRes.data);
         }
       } catch (err) {
+        if (cancelled) return;
+
         if (err.response?.status === 404) {
           navigate('/environments');
         } else {
-          setError('Не удалось загрузить данные сессии');
+          setError(err.message || 'Не удалось загрузить данные сессии');
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     init();
-  }, [navigate]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, waitForSessionReady]);
 
   const handleSelectScenario = useCallback(async (scenarioId) => {
     try {
@@ -86,12 +159,29 @@ export default function Workspace() {
     if (!window.confirm('Перезапустить окружение? Все текущие изменения будут сброшены.')) {
       return;
     }
+
     setRestarting(true);
+    setError('');
+    setLoading(true);
+    setLoadingMessage('перезапуск окружения...');
+
     try {
       await client.post(`/sessions/${session.id}/restart`);
+
+      const ready = await waitForSessionReady(session.id, {
+        onStatus: (status) => {
+          setLoadingMessage(status.message || 'перезапуск окружения...');
+        },
+      });
+
+      if (!ready) {
+        setError('Не удалось дождаться готовности окружения');
+      }
     } catch (err) {
       console.error('Не удалось перезапустить окружение', err);
+      setError('Не удалось перезапустить окружение');
     } finally {
+      setLoading(false);
       setRestarting(false);
     }
   };
@@ -124,7 +214,7 @@ export default function Workspace() {
   if (loading) {
     return (
       <div className="workspace-loading">
-        <span className="text-green mono">загрузка рабочего пространства...</span>
+        <span className="text-green mono">{loadingMessage}</span>
       </div>
     );
   }

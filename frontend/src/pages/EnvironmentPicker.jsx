@@ -23,8 +23,32 @@ export default function EnvironmentPicker() {
         // проверяем — вдруг у пользователя уже есть активная сессия
         // если есть — сразу отправляем на рабочую страницу
         const sessionResponse = await client.get('/sessions/current');
-        if (sessionResponse.data) {
-          navigate('/workspace');
+        if (sessionResponse.data?.id) {
+          try {
+            const statusResponse = await client.get(
+              `/sessions/${sessionResponse.data.id}/status`
+            );
+            const status = statusResponse.data || {};
+            const launchingStages = new Set([
+              'queued',
+              'lxd_starting',
+              'provisioning',
+              'compose_starting',
+              'services_booting',
+              'health_checks',
+            ]);
+
+            const shouldOpenWorkspace =
+              status.is_ready ||
+              status.exists ||
+              launchingStages.has(status.stage);
+
+            if (shouldOpenWorkspace) {
+              navigate('/workspace');
+            }
+          } catch {
+            // если статус не получить, остаёмся на выборе окружения
+          }
         }
       } catch (err) {
         // 404 значит сессии нет
