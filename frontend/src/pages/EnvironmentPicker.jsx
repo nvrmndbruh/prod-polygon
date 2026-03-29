@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { LogoIcon, LogoHorizontal } from '../components/Brand';
-import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
+import { ArrowRightIcon, ChevronDownIcon, GraphIcon, InfoIcon, TwoArrowsIcon } from '../components/Icons';
 import './EnvironmentPicker.css';
 
 export default function EnvironmentPicker() {
@@ -122,7 +122,7 @@ export default function EnvironmentPicker() {
                 onClick={handlePrev}
                 disabled={environments.length <= 1}
               >
-                <ChevronLeftIcon size={24} />
+                <ChevronDownIcon size={24} style={{ transform: 'rotate(90deg)' }} />
               </button>
 
               <div className="picker-cards">
@@ -154,7 +154,7 @@ export default function EnvironmentPicker() {
                 onClick={handleNext}
                 disabled={environments.length <= 1}
               >
-                <ChevronRightIcon size={24} />
+                <ChevronDownIcon size={24} style={{ transform: 'rotate(-90deg)' }} />
               </button>
             </div>
 
@@ -170,9 +170,15 @@ export default function EnvironmentPicker() {
                   запуск окружения...
                 </>
               ) : !selectedEnvironment?.is_available ? (
-                '[!] окружение недоступно'
+                <>
+                  <InfoIcon size={14} className="picker-start-icon" />
+                  окружение недоступно
+                </>
               ) : (
-                '[>] запустить окружение'
+                <>
+                  <ArrowRightIcon size={14} className="picker-start-icon" />
+                  запустить окружение
+                </>
               )}
             </button>
           </>
@@ -195,7 +201,7 @@ function EnvironmentCard({ environment, active, onClick }) {
     >
       {/* иконка окружения заглушка */}
       <div className="env-card-icon">
-        <span className="env-card-icon-text">[&gt;_]</span>
+        <GraphIcon size={36} className="env-card-icon-svg" />
       </div>
 
       <h3 className="env-card-name">{environment.name}</h3>

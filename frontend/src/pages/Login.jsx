@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import client from '../api/client';
 import { auth } from '../store/auth';
 import { LogoIcon, LogoHorizontal } from '../components/Brand';
+import { ArrowRightIcon } from '../components/Icons';
 import './Auth.css';
 
 export default function Login() {
@@ -90,9 +91,7 @@ export default function Login() {
               className="btn-primary auth-submit"
               disabled={loading}
             >
-              <span>[</span>
-              <span>:&gt;</span>
-              <span>]</span>
+              <ArrowRightIcon size={14} className="auth-submit-icon" />
               {loading ? 'вход...' : 'войти'}
             </button>
           </form>

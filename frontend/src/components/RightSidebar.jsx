@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import client from '../api/client';
-import { GraphIcon } from './Icons';
+import { ChevronDownIcon, GraphIcon, MonitoringIcon } from './Icons';
 import './RightSidebar.css';
 
 const SERVICE_CONNECTIONS = [
@@ -140,7 +140,7 @@ export default function RightSidebar({ open, onToggle, sessionId }) {
     <>
       {!open && (
         <button className="sidebar-toggle-btn right" onClick={onToggle}>
-          ‹
+          <ChevronDownIcon size={12} style={{ transform: 'rotate(90deg)' }} />
         </button>
       )}
 
@@ -153,7 +153,7 @@ export default function RightSidebar({ open, onToggle, sessionId }) {
               <span>граф</span>
             </div>
             <button className="btn-ghost sidebar-close" onClick={onToggle}>
-              ›
+              <ChevronDownIcon size={12} style={{ transform: 'rotate(-90deg)' }} />
             </button>
           </div>
 
@@ -294,7 +294,7 @@ export default function RightSidebar({ open, onToggle, sessionId }) {
         <div className="right-section right-section-logs">
           <div className="sidebar-header">
             <div className="sidebar-header-title">
-              <span className="text-orange mono">[|||]</span>
+              <MonitoringIcon size={13} className="text-orange" />
               <span>мониторинг</span>
             </div>
           </div>

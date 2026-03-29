@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { LogoIcon } from '../components/Brand';
+import {
+  DotsIcon,
+  ExitIcon,
+  LeftBarCloseIcon,
+  LeftBarOpenIcon,
+  PlusIcon,
+  ReloadIcon,
+} from '../components/Icons';
 import LeftSidebar from '../components/LeftSidebar';
 import RightSidebar from '../components/RightSidebar';
 import Terminal from '../components/Terminal';
@@ -240,7 +248,7 @@ export default function Workspace() {
             onClick={() => setLeftOpen((v) => !v)}
             title="Левая панель"
           >
-            ☰
+            {leftOpen ? <LeftBarOpenIcon size={16} /> : <LeftBarCloseIcon size={16} />}
           </button>
 
           <span className="topbar-env-name mono">
@@ -254,7 +262,7 @@ export default function Workspace() {
             disabled={restarting}
             title="Перезапустить окружение"
           >
-            {restarting ? '↻...' : '↻'}
+            <ReloadIcon size={14} className={restarting ? 'spin' : ''} />
           </button>
 
           <button
@@ -262,7 +270,7 @@ export default function Workspace() {
             onClick={handleEndSession}
             title="Завершить сессию"
           >
-            ⇥
+            <ExitIcon size={14} />
           </button>
         </div>
 
@@ -274,7 +282,7 @@ export default function Workspace() {
               className={`topbar-tab ${activeTerminal === term.id ? 'topbar-tab-active' : ''}`}
               onClick={() => setActiveTerminal(term.id)}
             >
-              <span className="topbar-tab-icon">□</span>
+              <span className="topbar-tab-icon"><DotsIcon size={10} /></span>
               <span>{term.label}</span>
               {terminals.length > 1 && (
                 <button
@@ -294,7 +302,7 @@ export default function Workspace() {
             onClick={handleAddTerminal}
             title="Новый терминал"
           >
-            +
+            <PlusIcon size={12} />
           </button>
         </div>
 
@@ -305,7 +313,9 @@ export default function Workspace() {
             onClick={() => setRightOpen((v) => !v)}
             title="Правая панель"
           >
-            □
+            <span className="mirrored-icon">
+              {rightOpen ? <LeftBarOpenIcon size={16} /> : <LeftBarCloseIcon size={16} />}
+            </span>
           </button>
         </div>
       </header>

@@ -110,6 +110,10 @@
   justify-content: center;
 }
 
+.auth-submit-icon {
+  color: #0a0a0a;
+}
+
 .auth-switch {
   font-size: 13px;
   color: var(--text-secondary);

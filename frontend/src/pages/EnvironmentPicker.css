@@ -115,6 +115,10 @@
   justify-content: center;
 }
 
+.env-card-icon-svg {
+  color: var(--color-green);
+}
+
 .env-card-icon-text {
   font-family: var(--font-mono);
   font-size: 28px;
@@ -127,6 +131,10 @@
 }
 
 .env-card-dim .env-card-icon-text {
+  color: var(--text-dim);
+}
+
+.env-card-dim .env-card-icon-svg {
   color: var(--text-dim);
 }
 
@@ -170,6 +178,10 @@
 .picker-start {
   padding: 12px 32px;
   font-size: 14px;
+}
+
+.picker-start-icon {
+  color: #0a0a0a;
 }
 
 .picker-starting-hint {

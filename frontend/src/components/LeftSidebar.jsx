@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import client from '../api/client';
-import { CheckIcon, HintIcon } from './Icons';
+import { CheckIcon, ChevronDownIcon, HintIcon, InfoIcon } from './Icons';
 import './LeftSidebar.css';
 
 export default function LeftSidebar({
@@ -79,11 +79,11 @@ export default function LeftSidebar({
       <aside className={`left-sidebar ${open ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="sidebar-header-title">
-            <span className="text-green mono">[i]</span>
+            <InfoIcon size={13} className="text-green" />
             <span>информация</span>
           </div>
           <button className="btn-ghost sidebar-close" onClick={onToggle}>
-            ‹
+            <ChevronDownIcon size={12} style={{ transform: 'rotate(90deg)' }} />
           </button>
         </div>
 
@@ -122,7 +122,7 @@ export default function LeftSidebar({
               {sortedHints.length > 0 && (
                 <div className="sidebar-section">
                   <div className="sidebar-label">
-                    <span className="text-orange mono">[?]</span>
+                    <HintIcon size={12} className="text-orange" />
                     {' '}подсказки{' '}
                     <span className="text-dim mono">
                       ({revealedCount}/{sortedHints.length})

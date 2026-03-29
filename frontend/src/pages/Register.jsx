@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import client from '../api/client';
 import { LogoIcon, LogoHorizontal } from '../components/Brand';
+import { ArrowRightIcon } from '../components/Icons';
 import './Auth.css';
 
 export default function Register() {
@@ -106,9 +107,7 @@ export default function Register() {
               className="btn-primary auth-submit"
               disabled={loading}
             >
-              <span>[</span>
-              <span>:&gt;</span>
-              <span>]</span>
+              <ArrowRightIcon size={14} className="auth-submit-icon" />
               {loading ? 'регистрация...' : 'зарегистрироваться'}
             </button>
           </form>

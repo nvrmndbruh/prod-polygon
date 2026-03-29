@@ -78,6 +78,8 @@
 .topbar-tab-icon {
   color: var(--text-dim);
   font-size: 11px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .topbar-tab-close {
@@ -95,10 +97,12 @@
 
 .topbar-tab-add {
   color: var(--text-dim);
-  font-size: 18px;
   padding: 2px 8px;
   border-radius: 4px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .topbar-tab-add:hover {
@@ -156,7 +160,6 @@
 }
 
 .topbar-restart {
-  font-size: 16px;
   opacity: 0.7;
   transition: opacity 0.2s;
 }
@@ -168,4 +171,13 @@
 .topbar-restart:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.mirrored-icon {
+  display: inline-flex;
+  transform: scaleX(-1);
+}
+
+.spin {
+  animation: spin 0.7s linear infinite;
 }
