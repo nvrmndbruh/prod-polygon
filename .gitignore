@@ -10,3 +10,6 @@ __pycache__/
 
 # Docker
 *.log
+
+# точка монтирования для Docker
+backend/environments/

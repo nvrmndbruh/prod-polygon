@@ -22,9 +22,9 @@ def get_db_connection():
     return psycopg2.connect(
         host=os.environ.get("DB_HOST", "db"),
         port=os.environ.get("DB_PORT", 5432),
-        dbname=os.environ.get("DB_NAME", "shop"),
-        user=os.environ.get("DB_USER", "shop"),
-        password=os.environ.get("DB_PASSWORD", "shop"),
+        dbname=os.environ.get("DB_NAME", "database_name"),
+        user=os.environ.get("DB_USER", "username"),
+        password=os.environ.get("DB_PASSWORD", "password"),
         connect_timeout=3,
     )
 
