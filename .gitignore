@@ -13,3 +13,6 @@ __pycache__/
 
 # точка монтирования для Docker
 backend/environments/
+
+# сертификаты lxd
+backend/lxd-certs/
