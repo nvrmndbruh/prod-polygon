@@ -45,6 +45,10 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pytest
       - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://fake:fake@localhost/fake
+          SECRET_KEY: secret_key_for_testing_purposes_only
+          PYTHONPATH: ~/prod-polygon/backend
         run: pytest backend/tests -v
 
   release:
