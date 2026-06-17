@@ -22,7 +22,7 @@ class LXCService:
             self._client = pylxd.Client(
                 endpoint=settings.LXD_URL,
                 cert=(settings.LXD_CERT, settings.LXD_KEY),
-                verify=False,
+                verify=settings.LXD_SERVER_CA,
             )
         return self._client
 

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     LXD_URL: str = "https://host.docker.internal:8443"
     LXD_CERT: str = "/app/lxd-certs/lxd-client.crt"
     LXD_KEY: str = "/app/lxd-certs/lxd-client.key"
+    LXD_SERVER_CA: str = "/app/lxd-certs/lxd-server.crt"
 
     class Config:
         env_file = ".env"
