@@ -1,4 +1,4 @@
-name: CI/CD
+name: CICD
 
 on:
   push:
@@ -41,7 +41,9 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install dependencies
-        run: pip install -r backend/requirements-dev.txt
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest
       - name: Run tests
         run: pytest backend/tests -v
 
@@ -57,7 +59,7 @@ jobs:
           fetch-depth: 0
       - name: Bump version and push tag
         id: tag_version
-        uses: mathieudutour/[email protected]
+        uses: mathieudutour/tag-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
