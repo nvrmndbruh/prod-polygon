@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // базовый URL бэкенда
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 const client = axios.create({
   baseURL: `${API_URL}/api/v1`,
