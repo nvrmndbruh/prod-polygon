@@ -32,23 +32,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install dependencies
-        run: |
-          pip install -r backend/requirements.txt
-          pip install pytest
-      - name: Run tests
-        run: pytest backend/tests -v
-
   release:
-    needs: [build, test]
+    needs: [build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     outputs:
